@@ -929,7 +929,7 @@
         <div style="display:flex; align-items:center; gap:16px;">
             <div class="chrome-meta">
                 <div class="chrome-meta-item"><div class="status-dot"></div><span>sys.online</span></div>
-                <span>v1.0.1</span>
+                <span>v1.0.2</span>
             </div>
             <button class="settings-btn" id="openSettings">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1225,7 +1225,16 @@
                 <div class="field-label">Sync</div>
                 <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-mid); margin-bottom: 10px;">Paste the raw HTML source of your Neoboard Preferences page here.</p>
                 <textarea id="importSource" placeholder="Paste Neopets HTML here..." style="height: 60px; margin-bottom: 12px;"></textarea>
-                <button id="importBtn">Sync Avatars</button>
+                <div class="block block-pink" style="margin-bottom: 24px;">
+                <div class="field-label">Sync</div>
+                <p style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-mid); margin-bottom: 10px;">Paste the raw HTML source of your Neoboard Preferences page here.</p>
+                <textarea id="importSource" placeholder="Paste Neopets HTML here..." style="height: 60px; margin-bottom: 12px;"></textarea>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button id="importBtn" style="flex: 1;">Sync Avatars (Add Only)</button>
+                    <button id="clearSyncBtn" class="btn-danger" style="flex: 1; border: 1px solid var(--pink);">Clear & Resync</button>
+                </div>
+            </div>
             </div>
 
             <div class="progress-header">
@@ -6405,6 +6414,24 @@ const avatarDatabase = [
             if (typeof updateGlobalCounters === "function") updateGlobalCounters();
             
             alert(`SUCCESS! We scanned your Preferences and unlocked ${matchCount} new avatars!`);
+        };
+
+        // --- CLEAR & RESYNC LOGIC ---
+        document.getElementById('clearSyncBtn').onclick = () => {
+            const val = document.getElementById('importSource').value;
+            if (!val) return alert("Please paste your Neopets source code first.");
+
+            if (confirm("WARNING: This will wipe your current collection and replace it ONLY with the avatars found in the pasted code. Continue?")) {
+                
+                // Wipe the collection, but preserve any "default" avatars just in case
+                unlockedAvatars = unlockedAvatars.filter(id => {
+                    const av = avatarDatabase.find(a => a.id === id);
+                    return av && av.type === 'default';
+                });
+                
+                // Immediately trigger the standard sync parser to rebuild the list
+                document.getElementById('importBtn').click();
+            }
         };
         
     // --- EDITOR SELECTOR ---
