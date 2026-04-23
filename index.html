@@ -32,6 +32,29 @@
             --neo-bg:     #dde8f0;
             --neo-border: #8ba8bf;
         }
+                /* ── AVATAR ANTI-DISTORTION & CRISPNESS FIX ── */
+        .avatar-card img, 
+        #previewAvatarImg, 
+        #currentAvatarDisplay {
+            width: 50px !important;
+            height: 50px !important;
+            min-width: 50px !important;
+            min-height: 50px !important;
+            
+            /* Prevent the image from stretching or squishing */
+            object-fit: cover !important; 
+            
+            /* pls don't try to fix it */
+            image-rendering: -moz-crisp-edges !important;
+            image-rendering: -webkit-optimize-contrast !important;
+            image-rendering: crisp-edges !important;
+            image-rendering: pixelated !important; 
+            
+            /* Centering */
+            margin: 0 auto;
+            display: block;
+        }
+        
 
         /* ══════════════════════════════
            THEMES
