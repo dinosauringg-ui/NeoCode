@@ -1,7 +1,8 @@
-const CACHE_NAME = 'neofont-cache-v1';
+const CACHE_NAME = 'neofont-cache-v2';
 const urlsToCache = [
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './assets/gifuct.js'
 ];
 
 self.addEventListener('install', event => {
