@@ -6355,65 +6355,61 @@ const avatarDatabase = [
             });
         }
 
-        // --- SYNC / IMPORT LOGIC ---
+        // --- SYNC PARSER ---
         document.getElementById('importBtn').onclick = () => {
-            const sourceText = document.getElementById('importSource').value;
-            if (!sourceText.trim()) {
-                alert("Please paste your Chat Preferences page source first!");
-                return;
-            }
+            const val = document.getElementById('importSource').value;
+            if (!val) return alert("Please paste your Neopets source code.");
 
             let matchCount = 0;
-            // Check if the pasted text looks like HTML source code
-            const isHTML = sourceText.includes('<html') || sourceText.includes('<select') || sourceText.includes('<option');
             
+            // Turn the pasted text into an invisible HTML document we can search
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(val, 'text/html');
+            
+            // Find avatars in the Modern Beta Layout (looks for images inside the settings box)
+            const modernImages = Array.from(doc.querySelectorAll('.settings-avatars img')).map(img => {
+                const parts = img.src.split('/');
+                return parts[parts.length - 1].toLowerCase(); // Extracts just the "filename.gif"
+            });
+            
+            // Find avatars in the Classic Layout (looks for dropdown options)
+            const classicOptions = Array.from(doc.querySelectorAll('option')).map(o => o.textContent.trim().toLowerCase());
+
             avatarDatabase.forEach(av => {
-                if (av.type === 'default') return; 
-                if (unlockedAvatars.includes(av.id)) return; 
+                if (av.type === 'default') return; // Skip defaults
                 
-                let isUnlocked = false;
-                const safeId = av.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const safeName = av.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                let isMatch = false;
 
-                if (isHTML) {
-                    // 1. The Dropdown Match: value="spacefaerie_premium"
-                    const valMatch = new RegExp(`value=["']${safeId}["']`, 'i');
-                    
-                    // 2. The Image Match: spacefaerie_premium.gif
-                    const gifMatch = new RegExp(`${safeId}\\.gif`, 'i');
-                    
-                    // 3. The Tag Match: >Premium - Space Faerie<
-                    const tagMatch = new RegExp(`>\\s*${safeName}\\s*<`, 'i');
-
-                    if (valMatch.test(sourceText) || gifMatch.test(sourceText) || tagMatch.test(sourceText)) {
-                        isUnlocked = true;
-                    }
-                } else {
-                    // Plain text fallback: only matches if the exact name is on its own line
-                    const exactNameMatch = new RegExp(`(?:^|\\n|\\r)\\s*${safeName}\\s*(?:$|\\n|\\r)`, 'i');
-                    if (exactNameMatch.test(sourceText)) {
-                        isUnlocked = true;
+                // Check Test 1: Modern Layout (Matches the image filename)
+                if (av.url) {
+                    const dbFilename = av.url.split('/').pop().toLowerCase();
+                    if (modernImages.includes(dbFilename)) {
+                        isMatch = true;
                     }
                 }
+                
+                // Check Test 2: Classic Layout (Matches the text in the dropdown)
+                if (!isMatch && classicOptions.includes(av.name.toLowerCase())) {
+                    isMatch = true;
+                }
 
-                if (isUnlocked) {
+                // If found, add to collection
+                if (isMatch && !unlockedAvatars.includes(av.id)) {
                     unlockedAvatars.push(av.id);
                     matchCount++;
                 }
             });
 
-            // Save and update the UI
-            if (matchCount > 0) {
-                localStorage.setItem('neoUnlocked_clean', JSON.stringify(unlockedAvatars));
-                renderMasterChecklist();
-                renderEditorSelector();
-                updateGlobalCounters();
-                alert(`SUCCESS! We strictly matched ${matchCount} new avatars!`);
-            } else {
-                alert("No new avatars found. Try right-clicking the Neopets page, selecting 'View Page Source', and pasting that!");
-            }
+            if (matchCount === 0) return alert("ERROR: No avatars matched. Tip: Right-click your Neoboard Preferences page, select 'View Page Source', and paste the code!");
+
+            // Save and refresh the UI
+            localStorage.setItem('neoUnlocked_clean', JSON.stringify(unlockedAvatars));
+            document.getElementById('importSource').value = '';
+            renderMasterChecklist();
+            renderEditorSelector();
+            if (typeof updateGlobalCounters === "function") updateGlobalCounters();
             
-            document.getElementById('importSource').value = ''; 
+            alert(`SUCCESS! We scanned your Preferences and unlocked ${matchCount} new avatars!`);
         };
         // --- EDITOR SELECTOR ---
         function renderEditorSelector() {
