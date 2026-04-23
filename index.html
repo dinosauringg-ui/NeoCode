@@ -7,7 +7,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
-<script src="assets/gifuct.js"></script>
+    <script type="module">
+    // This grabs the Node.js library and translates it for Firefox on the fly
+    import { parseGIF, decompressFrames } from 'https://esm.sh/gifuct-js@2.1.2';
+    
+    // This glues the tools to your browser window so your engine can find them
+    window.parseGIF = parseGIF;
+    window.decompressFrames = decompressFrames;
+    
+    console.log("GIF Engine successfully loaded via ESM!");
+</script>
     <style>
         :root {
             --bg:         #060608;
@@ -1458,7 +1467,7 @@
         
 
     <script>
-        // ── THEME SYSTEM ──
+                // ── THEME SYSTEM ──
 const THEMES = ['default','sand','light','forest','ocean','candy','mono','dusk','terminal','rose','faerieland','hauntedwoods','lostdesert','classicneo'];        const htmlEl = document.documentElement;
         const themeLogoMap = {
             sand: { c: '#f0b840', g: 'rgba(240,184,64,0.30)', d: 'rgba(240,184,64,0.07)' },
@@ -6869,14 +6878,13 @@ document.getElementById('currentAvatarDisplay').src = `assets/avatars/${av.id}.g
                 if (frameControls) frameControls.style.display = 'flex';
 
                 
-                // --- DEFINITIVE LOCAL GIF ENGINE ---
+            // --- THE BULLETPROOF GIF ENGINE ---
             let parsedFrames = [];
             let currentFrameIndex = 0;
 
             const loadAvatarFrames = async () => {
-                // Check if the local file loaded
-                if (typeof gifuct === 'undefined') {
-                    console.error("The file assets/gifuct.js was not found or is empty.");
+                if (typeof window.parseGIF === 'undefined') {
+                    console.error("ESM Library not found in window.");
                     editLabel.textContent = "LIB ERR";
                     return;
                 }
@@ -6886,9 +6894,8 @@ document.getElementById('currentAvatarDisplay').src = `assets/avatars/${av.id}.g
                     const response = await fetch(`assets/avatars/${av.id}.gif`);
                     const buffer = await response.arrayBuffer();
 
-                    // This version of the library uses the 'gifuct' object
-                    const gif = gifuct.parseGIF(buffer);
-                    parsedFrames = gifuct.decompressFrames(gif, true); 
+                    const gif = window.parseGIF(buffer);
+                    parsedFrames = window.decompressFrames(gif, true); // 'true' generates the RGBA pixels
                     currentFrameIndex = 0;
 
                     editLabel.textContent = originalText;
@@ -6901,47 +6908,64 @@ document.getElementById('currentAvatarDisplay').src = `assets/avatars/${av.id}.g
                     drawGifFrame(0);
 
                 } catch (err) {
-                    console.error("Failed to decode GIF:", err);
+                    console.error("Engine failed during decode:", err);
                     editLabel.textContent = "ERROR";
                 }
             };
+
+            // We use a persistent off-screen canvas to layer the frames correctly
+            const gifCanvas = document.createElement('canvas');
+            const gifCtx = gifCanvas.getContext('2d');
 
             const drawGifFrame = (index) => {
                 if (!parsedFrames || parsedFrames.length === 0) return;
                 
                 const frame = parsedFrames[index];
+                if (!frame.patch) return; // Safety check
+
                 const frameCounterUi = document.getElementById('frameCounterUi');
                 if (frameCounterUi) frameCounterUi.textContent = index + 1; 
 
-                const frameData = new ImageData(
-                    new Uint8ClampedArray(frame.patch),
-                    frame.dims.width,
-                    frame.dims.height
-                );
+                // If it's the first frame, set up the canvas dimensions (usually 50x50)
+                if (index === 0) {
+                    gifCanvas.width = frame.dims.width;
+                    gifCanvas.height = frame.dims.height;
+                    gifCtx.clearRect(0, 0, gifCanvas.width, gifCanvas.height);
+                }
 
+                // THE CRITICAL FIX: The safe way to build pixel data without crashing
                 const offCanvas = document.createElement('canvas');
                 offCanvas.width = frame.dims.width;
                 offCanvas.height = frame.dims.height;
                 const offCtx = offCanvas.getContext('2d');
-                offCtx.putImageData(frameData, 0, 0);
 
-                zCtx.clearRect(0, 0, 300, 300);
-                zCtx.imageSmoothingEnabled = false;
-                zCtx.drawImage(offCanvas, 0, 0, 300, 300);
+                const patchData = offCtx.createImageData(frame.dims.width, frame.dims.height);
+                patchData.data.set(new Uint8ClampedArray(frame.patch));
+                offCtx.putImageData(patchData, 0, 0);
+
+                // Draw the patch at its specific top/left coordinates
+                gifCtx.drawImage(offCanvas, frame.dims.left, frame.dims.top);
+
+                // Finally, scale the completed frame up to your 300x300 loupe canvas
+                zCtx.clearRect(0, 0, 300, 300); 
+                zCtx.imageSmoothingEnabled = false; // Keep the pixel art crisp
+                zCtx.drawImage(gifCanvas, 0, 0, 300, 300);
             };
 
-            // Re-hook up the buttons
-            if (document.getElementById('nextFrameBtn')) {
-                document.getElementById('nextFrameBtn').onclick = (e) => {
-                    e.stopPropagation(); // Stop click from closing modal
+            // Re-hook the buttons to ensure they work
+            const nextBtn = document.getElementById('nextFrameBtn');
+            if (nextBtn) {
+                nextBtn.onclick = (e) => {
+                    e.stopPropagation();
                     currentFrameIndex++;
                     if (currentFrameIndex >= parsedFrames.length) currentFrameIndex = 0; 
                     drawGifFrame(currentFrameIndex);
                 };
             }
 
-            if (document.getElementById('prevFrameBtn')) {
-                document.getElementById('prevFrameBtn').onclick = (e) => {
+            const prevBtn = document.getElementById('prevFrameBtn');
+            if (prevBtn) {
+                prevBtn.onclick = (e) => {
                     e.stopPropagation();
                     currentFrameIndex--;
                     if (currentFrameIndex < 0) currentFrameIndex = parsedFrames.length - 1; 
@@ -6951,11 +6975,7 @@ document.getElementById('currentAvatarDisplay').src = `assets/avatars/${av.id}.g
 
             loadAvatarFrames();
             
-            // --- END NEW ENGINE ---
-                const nextBtn = document.getElementById('nextFrameBtn');
-                const prevBtn = document.getElementById('prevFrameBtn');
-                if (nextBtn) nextBtn.onclick = () => loadFrame(currentFrame + 1);
-                if (prevBtn) prevBtn.onclick = () => loadFrame(currentFrame > 1 ? currentFrame - 1 : 1);
+        
             };
 
             document.getElementById('activeAvatarButton').onclick = (e) => {
