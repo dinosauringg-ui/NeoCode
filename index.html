@@ -6871,45 +6871,31 @@ function parseNeoCode(text) {
                 if (frameControls) frameControls.style.display = 'flex';
 
                 const loadFrame = (frameNum) => {
-                    editLabel.textContent = "LOAD...";
-                    const img = new Image();
-                    img.crossOrigin = "Anonymous";
-                    const cleanUrl = av.url.replace(/^https?:\/\//, '');
-                    img.src = `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&page=${frameNum}`;
+                editLabel.textContent = "LOAD...";
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                
+                // Point directly to your brand new local files!
+                img.src = `assets/avatars/${av.id}.gif`;
 
-                    img.onload = () => {
-                        editLabel.textContent = originalText;
-                        loupeModal.style.display = 'flex';
-                        zCtx.clearRect(0, 0, 300, 300);
-                        zCtx.imageSmoothingEnabled = false;
-                        zCtx.drawImage(img, 0, 0, 300, 300);
-                        
-                        const frameCounterUi = document.getElementById('frameCounterUi');
-                        if (frameCounterUi) frameCounterUi.textContent = frameNum;
-                        currentFrame = frameNum;
-                    };
-
-                    img.onerror = () => {
-                        if (frameNum > 1) {
-                            currentFrame = 1;
-                            loadFrame(1); 
-                        } else {
-                            const fallback = new Image();
-                            fallback.crossOrigin = "Anonymous";
-                            fallback.src = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(av.url);
-                            fallback.onload = () => {
-                                editLabel.textContent = originalText;
-                                loupeModal.style.display = 'flex';
-                                zCtx.clearRect(0, 0, 300, 300);
-                                zCtx.imageSmoothingEnabled = false;
-                                zCtx.drawImage(fallback, 0, 0, 300, 300);
-                                if (frameControls) frameControls.style.display = 'none';
-                            };
-                        }
-                    };
+                img.onload = () => {
+                    editLabel.textContent = originalText;
+                    loupeModal.style.display = 'flex';
+                    zCtx.clearRect(0, 0, 300, 300);
+                    zCtx.imageSmoothingEnabled = false;
+                    zCtx.drawImage(img, 0, 0, 300, 300);
+                    
+                    const frameCounterUi = document.getElementById('frameCounterUi');
+                    if (frameCounterUi) frameCounterUi.textContent = frameNum;
+                    currentFrame = frameNum;
+                    
+                    // Because it's local, we don't have to worry about Cloudflare blocking frames. 
+                    // However, standard HTML canvas can't natively split local GIFs into frames without a library like gif.js.
+                    // If you only care about getting colors from Frame 1, hide the controls.
+                    if (frameControls) frameControls.style.display = 'none'; 
                 };
-
-                loadFrame(1);
+            };
+            loadFrame(1);
 
                 const nextBtn = document.getElementById('nextFrameBtn');
                 const prevBtn = document.getElementById('prevFrameBtn');
