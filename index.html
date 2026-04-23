@@ -6,6 +6,7 @@
     <title>NEOCODE.hub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
     <style>
         :root {
             --bg:         #060608;
@@ -6657,6 +6658,12 @@ const avatarDatabase = [
                 document.getElementById('minimizedState').style.display = 'none';
             };
         });
+        // Register the service worker for offline use
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("NeoCode Hub: Offline engine active."))
+        .catch(err => console.log("Service Worker failed:", err));
+}
     </script>
 </body>
 </html>
