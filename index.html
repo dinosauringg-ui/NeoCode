@@ -6355,54 +6355,49 @@ const avatarDatabase = [
             });
         }
 
-        // --- SYNC PARSER ---
+       // --- SYNC PARSER ---
         document.getElementById('importBtn').onclick = () => {
             const val = document.getElementById('importSource').value;
             if (!val) return alert("Please paste your Neopets source code.");
 
             let matchCount = 0;
             
-            // Turn the pasted text into an invisible HTML document we can search
             const parser = new DOMParser();
             const doc = parser.parseFromString(val, 'text/html');
             
-            // Find avatars in the Modern Beta Layout (looks for images inside the settings box)
-            const modernImages = Array.from(doc.querySelectorAll('.settings-avatars img')).map(img => {
-                const parts = img.src.split('/');
-                return parts[parts.length - 1].toLowerCase(); // Extracts just the "filename.gif"
-            });
+            // 1. Modern Layout: Extract the exact ID from the onclick="selectAvatar('id')"
+            const modernIds = Array.from(doc.querySelectorAll('.settings-avatars .settings-av')).map(div => {
+                const onclickStr = div.getAttribute('onclick');
+                if (onclickStr) {
+                    const match = onclickStr.match(/selectAvatar\('([^']+)'\)/);
+                    if (match) return match[1].toLowerCase();
+                }
+                return '';
+            }).filter(id => id !== '');
             
-            // Find avatars in the Classic Layout (looks for dropdown options)
-            const classicOptions = Array.from(doc.querySelectorAll('option')).map(o => o.textContent.trim().toLowerCase());
+            // 2. Classic Layout: Extract the exact ID from the option's "value" attribute
+            const classicIds = Array.from(doc.querySelectorAll('select[name="avatar"] option'))
+                                      .map(o => o.value.toLowerCase());
+
+            // Combine all found IDs into one array
+            const foundIds = [...modernIds, ...classicIds];
+
+            if (foundIds.length === 0) {
+                return alert("ERROR: Could not find the avatar list. Make sure you are pasting the source code of your Neoboard Preferences page.");
+            }
 
             avatarDatabase.forEach(av => {
-                if (av.type === 'default') return; // Skip defaults
+                if (av.type === 'default') return; 
                 
-                let isMatch = false;
-
-                // Check Test 1: Modern Layout (Matches the image filename)
-                if (av.url) {
-                    const dbFilename = av.url.split('/').pop().toLowerCase();
-                    if (modernImages.includes(dbFilename)) {
-                        isMatch = true;
+                // Compare the found IDs directly against your database ID
+                if (foundIds.includes(av.id.toLowerCase())) {
+                    if (!unlockedAvatars.includes(av.id)) {
+                        unlockedAvatars.push(av.id);
+                        matchCount++;
                     }
-                }
-                
-                // Check Test 2: Classic Layout (Matches the text in the dropdown)
-                if (!isMatch && classicOptions.includes(av.name.toLowerCase())) {
-                    isMatch = true;
-                }
-
-                // If found, add to collection
-                if (isMatch && !unlockedAvatars.includes(av.id)) {
-                    unlockedAvatars.push(av.id);
-                    matchCount++;
                 }
             });
 
-            if (matchCount === 0) return alert("ERROR: No avatars matched. Tip: Right-click your Neoboard Preferences page, select 'View Page Source', and paste the code!");
-
-            // Save and refresh the UI
             localStorage.setItem('neoUnlocked_clean', JSON.stringify(unlockedAvatars));
             document.getElementById('importSource').value = '';
             renderMasterChecklist();
