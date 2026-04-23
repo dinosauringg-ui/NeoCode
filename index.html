@@ -6526,34 +6526,32 @@ const avatarDatabase = [
             }
             updatePreview();
         };
+function parseNeoCode(text) {
+    if (!text) return '';
+    let parsed = text
+        .replace(/\[b\]/gi, '<b>').replace(/\[\/b\]/gi, '</b>')
+        .replace(/\[i\]/gi, '<i>').replace(/\[\/i\]/gi, '</i>')
+        .replace(/\[u\]/gi, '<u>').replace(/\[\/u\]/gi, '</u>')
+        .replace(/\[sup\]/gi, '<sup>').replace(/\[\/sup\]/gi, '</sup>')
+        .replace(/\[sub\]/gi, '<sub>').replace(/\[\/sub\]/gi, '</sub>')
+        .replace(/\[center\]/gi, '<div style="text-align: center;">').replace(/\[\/center\]/gi, '</div>')
+        .replace(/\[br\]/gi, '<br>');
 
-        // --- PREVIEW RENDERER ---
-        function parseNeoCode(text) {
-            if (!text) return '';
-            let parsed = text
-                .replace(/\[b\]/gi, '<b>').replace(/\[\/b\]/gi, '</b>')
-                .replace(/\[i\]/gi, '<i>').replace(/\[\/i\]/gi, '</i>')
-                .replace(/\[center\]/gi, '<div style="text-align: center;">').replace(/\[\/center\]/gi, '</div>')
-                .replace(/\[br\]/gi, '<br>');
-
-            parsed = parsed.replace(/\[font([^\]]*)\]/gi, function(match, attr) {
-                let styles = [];
-                let cMatch = attr.match(/c=(#[0-9a-fA-F]{3,6}|[a-zA-Z]+)/i);
-                if (cMatch) styles.push(`color: ${cMatch[1]}`);
-                let sMatch = attr.match(/s=([1-4])/i);
-                if (sMatch) styles.push(`font-size: ${{'1':'10px','2':'12px','3':'14px','4':'16px'}[sMatch[1]]}`);
-                let fMatch = attr.match(/f=([a-zA-Z0-9\-\s]+)/i);
-                if (fMatch) {
-                    if (fMatch[1].toLowerCase() === 'monospace') {
-                        styles.push(`font-family: 'JetBrains Mono', monospace`);
-                    } else {
-                        styles.push(`font-family: ${fMatch[1]}, sans-serif`);
-                    }
-                }
-                return `<span style="${styles.join('; ')}">`;
-            });
-            return parsed.replace(/\[\/font\]/gi, '</span>');
+    parsed = parsed.replace(/\[font([^\]]*)\]/gi, function(match, attr) {
+        let styles = [];
+        let cMatch = attr.match(/c=(#[0-9a-fA-F]{3,6}|[a-zA-Z]+)/i);
+        if (cMatch) styles.push(`color: ${cMatch[1]}`);
+        let sMatch = attr.match(/s=([1-4])/i);
+        if (sMatch) styles.push(`font-size: ${{'1':'10px','2':'12px','3':'14px','4':'16px'}[sMatch[1]]}`);
+        let fMatch = attr.match(/f=([a-zA-Z0-9\-\s]+)/i);
+        if (fMatch) {
+            const fontName = fMatch[1].toLowerCase() === 'monospace' ? "'JetBrains Mono', monospace" : fMatch[1];
+            styles.push(`font-family: ${fontName}, sans-serif`);
         }
+        return `<span style="${styles.join('; ')}">`;
+    });
+    return parsed.replace(/\[\/font\]/gi, '</span>');
+}
 
         function updatePreview() {
             if (document.getElementById('usernameCount')) {
