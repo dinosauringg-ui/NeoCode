@@ -6355,40 +6355,66 @@ const avatarDatabase = [
             });
         }
 
-        // --- SYNC PARSER ---
+        // --- SYNC / IMPORT LOGIC ---
         document.getElementById('importBtn').onclick = () => {
-            const val = document.getElementById('importSource').value;
-            if (!val) return alert("Please paste your Neopets source code.");
-
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(val, 'text/html');
-            const pageText = doc.body ? doc.body.textContent : val;
-            const cleanSource = pageText.replace(/[^a-z0-9]/gi, '').toLowerCase();
+            const sourceText = document.getElementById('importSource').value;
+            if (!sourceText.trim()) {
+                alert("Please paste your Chat Preferences page source first!");
+                return;
+            }
 
             let matchCount = 0;
+            
+            // 1. Isolate the values from HTML dropdowns (e.g., value="avatar_id")
+            const htmlValueRegex = /value=["']([^"']+)["']/gi;
+            const foundValues = new Set();
+            let match;
+            while ((match = htmlValueRegex.exec(sourceText)) !== null) {
+                // Neopets IDs are often lowercase in the source code
+                foundValues.add(match[1].toLowerCase());
+            }
+
+            // 2. Safely check the database against our strict findings
             avatarDatabase.forEach(av => {
-                if (av.type === 'default') return;
-                const cleanDbName = av.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
+                if (av.type === 'default') return; // Skip defaults
+                if (unlockedAvatars.includes(av.id)) return; // Skip already unlocked
                 
-                if (cleanSource.includes(cleanDbName)) {
-                    if (!unlockedAvatars.includes(av.id)) {
-                        unlockedAvatars.push(av.id);
-                        matchCount++;
+                let isUnlocked = false;
+
+                // STRATEGY A: Check if the exact ID was in a dropdown value
+                if (foundValues.has(av.id.toLowerCase())) {
+                    isUnlocked = true;
+                } 
+                // STRATEGY B: Fallback if the user pasted raw text instead of HTML source
+                else if (!sourceText.includes('<html') && !sourceText.includes('<body')) {
+                    // Look for the exact avatar name, but only on its own line or surrounded by tabs
+                    const safeName = av.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special chars
+                    const exactNameRegex = new RegExp(`(?:^|\\n|\\t)\\s*${safeName}\\s*(?:$|\\n|\\t)`, 'i');
+                    if (exactNameRegex.test(sourceText)) {
+                        isUnlocked = true;
                     }
+                }
+
+                // If found, add it to the collection
+                if (isUnlocked) {
+                    unlockedAvatars.push(av.id);
+                    matchCount++;
                 }
             });
 
-            if (matchCount === 0) return alert("ERROR: No avatars matched. Ensure the list is visible on Neopets before copying source!");
-
-           localStorage.setItem('neoUnlocked_clean', JSON.stringify(unlockedAvatars));
-            document.getElementById('importSource').value = '';
-            renderMasterChecklist();
-            renderEditorSelector();
-            // ADD THIS LINE HERE:
-            updateGlobalCounters();
-            alert(`SUCCESS! We scanned the text and matched ${matchCount} avatars!`);
+            // 3. Save and refresh the UI
+            if (matchCount > 0) {
+                localStorage.setItem('neoUnlocked_clean', JSON.stringify(unlockedAvatars));
+                renderMasterChecklist();
+                renderEditorSelector();
+                updateGlobalCounters();
+                alert(`SUCCESS! We strictly matched ${matchCount} new avatars!`);
+            } else {
+                alert("No new avatars found. Make sure you are pasting the 'Page Source' of the Chat Preferences page.");
+            }
+            
+            document.getElementById('importSource').value = ''; // Clear the box
         };
-
         // --- EDITOR SELECTOR ---
         function renderEditorSelector() {
             const selector = document.getElementById('editorAvatarSelector');
