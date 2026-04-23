@@ -929,7 +929,7 @@
         <div style="display:flex; align-items:center; gap:16px;">
             <div class="chrome-meta">
                 <div class="chrome-meta-item"><div class="status-dot"></div><span>sys.online</span></div>
-                <span>v1.0.3</span>
+                <span>v1.0.4</span>
             </div>
             <button class="settings-btn" id="openSettings">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -6360,7 +6360,7 @@ const avatarDatabase = [
             });
         }
 
-       // --- SYNC PARSER ---
+      // --- SYNC PARSER ---
         document.getElementById('importBtn').onclick = () => {
             const val = document.getElementById('importSource').value;
             if (!val) return alert("Please paste your Neopets source code.");
@@ -6370,7 +6370,7 @@ const avatarDatabase = [
             const doc = parser.parseFromString(val, 'text/html');
             const ownedAvatars = [];
             
-            // 1. Scrape Modern Layout (Extracts BOTH ID and Name)
+            // 1. Scrape Modern Layout
             doc.querySelectorAll('.settings-avatars .settings-av').forEach(div => {
                 let neoId = '';
                 const onclickStr = div.getAttribute('onclick');
@@ -6378,14 +6378,12 @@ const avatarDatabase = [
                     const match = onclickStr.match(/selectAvatar\('([^']+)'\)/);
                     if (match) neoId = match[1].toLowerCase().trim();
                 }
-                
                 const img = div.querySelector('img');
                 const neoName = img ? img.alt.toLowerCase().trim() : '';
-                
                 if (neoId || neoName) ownedAvatars.push({ id: neoId, name: neoName });
             });
             
-            // 2. Scrape Classic Layout (Extracts BOTH ID and Name)
+            // 2. Scrape Classic Layout
             doc.querySelectorAll('select[name="avatar"] option').forEach(o => {
                 ownedAvatars.push({ 
                     id: o.value.toLowerCase().trim(), 
@@ -6397,37 +6395,31 @@ const avatarDatabase = [
                 return alert("ERROR: Could not find the avatar list. Make sure you are pasting the source code of your Neoboard Preferences page.");
             }
 
+            // Helper to strip punctuation and spaces for 1-to-1 comparison
+            const cleanStr = (str) => str.replace(/[^a-z0-9]/g, '');
+
             avatarDatabase.forEach(av => {
                 if (av.type === 'default') return; 
                 
-                const dbId = av.id.toLowerCase().trim();
-                const dbName = av.name.toLowerCase().trim();
-                // Create a "clean" version with no punctuation/spaces for fuzzy matching
-                const cleanDbName = dbName.replace(/[^a-z0-9]/g, ''); 
+                const dbId = cleanStr(av.id.toLowerCase());
+                const dbName = cleanStr(av.name.toLowerCase());
                 
                 let isMatch = false;
 
                 for (let owned of ownedAvatars) {
-                    const neoId = owned.id;
-                    const neoName = owned.name;
-                    const cleanNeoName = neoName.replace(/[^a-z0-9]/g, '');
+                    // Strip Neopets' modern prefixes (ava_, aim_, hic_, ac_) from the ID before checking
+                    const neoId = cleanStr(owned.id).replace(/^(ava|aim|hic|ac)/, '');
+                    const neoName = cleanStr(owned.name);
 
-                    // Test A: Exact ID Match
+                    // STRICT TEST 1: Exact ID Match (after stripping prefixes)
                     if (neoId && neoId === dbId) { isMatch = true; break; }
                     
-                    // Test B: Partial ID Match (e.g., "aim_maraquanlupe" captures "maraquanlupe")
-                    if (neoId && neoId.length > 4 && dbId.length > 4 && (neoId.includes(dbId) || dbId.includes(neoId))) { isMatch = true; break; }
-                    
-                    // Test C: Exact Name Match
+                    // STRICT TEST 2: Exact Name Match (ignores punctuation/spaces)
                     if (neoName && neoName === dbName) { isMatch = true; break; }
-                    
-                    // Test D: Stripped Name Match (e.g., "whack-a-kass" captures "whackakass")
-                    if (cleanNeoName && cleanNeoName === cleanDbName) { isMatch = true; break; }
-                    
-                    // Test E: Substring Name Match (e.g., "Lawyerbot <3 Usuki" captures "Lawyerbot")
-                    // (Restricted to strings > 6 chars so "Acara" doesn't falsely unlock "Royalboy Acara")
-                    if (cleanNeoName.length > 6 && cleanDbName.length > 6 && (cleanNeoName.includes(cleanDbName) || cleanDbName.includes(cleanNeoName))) {
-                        isMatch = true; break;
+
+                    // STRICT TEST 3: Edge Cases (JN adds "Avatar" or "<3 Usuki" to database names)
+                    if (neoName && (neoName === dbName.replace(/avatar$/, '') || neoName === dbName.replace(/3usuki$/, ''))) { 
+                        isMatch = true; break; 
                     }
                 }
 
@@ -6443,9 +6435,8 @@ const avatarDatabase = [
             renderEditorSelector();
             if (typeof updateGlobalCounters === "function") updateGlobalCounters();
             
-            alert(`SUCCESS! We cross-referenced Jellyneo's DB and unlocked ${matchCount} avatars!`);
+            alert(`SUCCESS! Clean Sync completed. Unlocked ${matchCount} avatars!`);
         };
-
         // --- CLEAR & RESYNC LOGIC ---
         document.getElementById('clearSyncBtn').onclick = () => {
             const val = document.getElementById('importSource').value;
