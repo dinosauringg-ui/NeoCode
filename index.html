@@ -6513,8 +6513,7 @@ const avatarDatabase = [
                     const card = document.createElement('div');
                     const isUnlocked = unlockedAvatars.includes(av.id);
                     card.className = `avatar-card ${isUnlocked ? 'unlocked' : ''}`;
-                    card.innerHTML = `<img src="${av.url}"><div class="avatar-label">${av.name}</div><div class="avatar-tooltip">${av.solution}</div>`;
-                    
+                    card.innerHTML = `<img src="assets/avatars/${av.id}.gif"><div class="avatar-label">${av.name}</div><div class="avatar-tooltip">${av.solution}</div>`;                    
                     card.onclick = (e) => {
                         e.stopPropagation(); 
                         if (av.type === 'default') return; 
@@ -6664,14 +6663,12 @@ const avatarDatabase = [
             availableAvatars.forEach(av => {
                 const card = document.createElement('div');
                 card.className = `avatar-card ${av.id === currentAvatarId ? 'active' : ''}`;
-                card.innerHTML = `<img src="${av.url}"><div class="avatar-label">${av.name}</div>`;
-                
+card.innerHTML = `<img src="assets/avatars/${av.id}.gif"><div class="avatar-label">${av.name}</div>`;                
                 card.onclick = () => {
                     currentAvatarId = av.id;
                     document.getElementById('selectionState').style.display = 'none';
                     document.getElementById('minimizedState').style.display = 'flex';
-                    document.getElementById('currentAvatarDisplay').src = av.url;
-                    document.getElementById('activeAvatarName').textContent = av.name;
+document.getElementById('currentAvatarDisplay').src = `assets/avatars/${av.id}.gif`;                    document.getElementById('activeAvatarName').textContent = av.name;
 
                     window.currentPalette = avatarPalettes[currentAvatarId] || ['#222','#222','#222','#222','#222','#222'];
                     
@@ -6819,7 +6816,7 @@ function parseNeoCode(text) {
                 if (av) {
                     document.getElementById('selectionState').style.display = 'none';
                     document.getElementById('minimizedState').style.display = 'flex';
-                    document.getElementById('currentAvatarDisplay').src = av.url;
+document.getElementById('currentAvatarDisplay').src = `assets/avatars/${av.id}.gif`;
                     document.getElementById('activeAvatarName').textContent = av.name;
                     
                     // 4. Restore the custom color palette for this specific avatar!
