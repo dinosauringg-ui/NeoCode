@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
+<script src="assets/gifuct.js"></script>
     <style>
         :root {
             --bg:         #060608;
@@ -6867,33 +6868,90 @@ document.getElementById('currentAvatarDisplay').src = `assets/avatars/${av.id}.g
                 const frameControls = document.getElementById('frameControls');
                 if (frameControls) frameControls.style.display = 'flex';
 
-                const loadFrame = (frameNum) => {
-                editLabel.textContent = "LOAD...";
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
                 
-                // Point directly to your brand new local files!
-                img.src = `assets/avatars/${av.id}.gif`;
+                // --- DEFINITIVE LOCAL GIF ENGINE ---
+            let parsedFrames = [];
+            let currentFrameIndex = 0;
 
-                img.onload = () => {
+            const loadAvatarFrames = async () => {
+                // Check if the local file loaded
+                if (typeof gifuct === 'undefined') {
+                    console.error("The file assets\gifuct.js was not found or is empty.");
+                    editLabel.textContent = "LIB ERR";
+                    return;
+                }
+
+                editLabel.textContent = "DECODING...";
+                try {
+                    const response = await fetch(`assets/avatars/${av.id}.gif`);
+                    const buffer = await response.arrayBuffer();
+
+                    // This version of the library uses the 'gifuct' object
+                    const gif = gifuct.parseGIF(buffer);
+                    parsedFrames = gifuct.decompressFrames(gif, true); 
+                    currentFrameIndex = 0;
+
                     editLabel.textContent = originalText;
                     loupeModal.style.display = 'flex';
-                    zCtx.clearRect(0, 0, 300, 300);
-                    zCtx.imageSmoothingEnabled = false;
-                    zCtx.drawImage(img, 0, 0, 300, 300);
                     
-                    const frameCounterUi = document.getElementById('frameCounterUi');
-                    if (frameCounterUi) frameCounterUi.textContent = frameNum;
-                    currentFrame = frameNum;
-                    
-                    // Because it's local, we don't have to worry about Cloudflare blocking frames. 
-                    // However, standard HTML canvas can't natively split local GIFs into frames without a library like gif.js.
-                    // If you only care about getting colors from Frame 1, hide the controls.
-                    if (frameControls) frameControls.style.display = 'none'; 
-                };
-            };
-            loadFrame(1);
+                    if (frameControls) {
+                        frameControls.style.display = parsedFrames.length > 1 ? 'flex' : 'none';
+                    }
 
+                    drawGifFrame(0);
+
+                } catch (err) {
+                    console.error("Failed to decode GIF:", err);
+                    editLabel.textContent = "ERROR";
+                }
+            };
+
+            const drawGifFrame = (index) => {
+                if (!parsedFrames || parsedFrames.length === 0) return;
+                
+                const frame = parsedFrames[index];
+                const frameCounterUi = document.getElementById('frameCounterUi');
+                if (frameCounterUi) frameCounterUi.textContent = index + 1; 
+
+                const frameData = new ImageData(
+                    new Uint8ClampedArray(frame.patch),
+                    frame.dims.width,
+                    frame.dims.height
+                );
+
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = frame.dims.width;
+                offCanvas.height = frame.dims.height;
+                const offCtx = offCanvas.getContext('2d');
+                offCtx.putImageData(frameData, 0, 0);
+
+                zCtx.clearRect(0, 0, 300, 300);
+                zCtx.imageSmoothingEnabled = false;
+                zCtx.drawImage(offCanvas, 0, 0, 300, 300);
+            };
+
+            // Re-hook up the buttons
+            if (document.getElementById('nextFrameBtn')) {
+                document.getElementById('nextFrameBtn').onclick = (e) => {
+                    e.stopPropagation(); // Stop click from closing modal
+                    currentFrameIndex++;
+                    if (currentFrameIndex >= parsedFrames.length) currentFrameIndex = 0; 
+                    drawGifFrame(currentFrameIndex);
+                };
+            }
+
+            if (document.getElementById('prevFrameBtn')) {
+                document.getElementById('prevFrameBtn').onclick = (e) => {
+                    e.stopPropagation();
+                    currentFrameIndex--;
+                    if (currentFrameIndex < 0) currentFrameIndex = parsedFrames.length - 1; 
+                    drawGifFrame(currentFrameIndex);
+                };
+            }
+
+            loadAvatarFrames();
+            
+            // --- END NEW ENGINE ---
                 const nextBtn = document.getElementById('nextFrameBtn');
                 const prevBtn = document.getElementById('prevFrameBtn');
                 if (nextBtn) nextBtn.onclick = () => loadFrame(currentFrame + 1);
