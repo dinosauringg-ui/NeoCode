@@ -6364,45 +6364,45 @@ const avatarDatabase = [
             }
 
             let matchCount = 0;
+            // Check if the pasted text looks like HTML source code
+            const isHTML = sourceText.includes('<html') || sourceText.includes('<select') || sourceText.includes('<option');
             
-            // 1. Isolate the values from HTML dropdowns (e.g., value="avatar_id")
-            const htmlValueRegex = /value=["']([^"']+)["']/gi;
-            const foundValues = new Set();
-            let match;
-            while ((match = htmlValueRegex.exec(sourceText)) !== null) {
-                // Neopets IDs are often lowercase in the source code
-                foundValues.add(match[1].toLowerCase());
-            }
-
-            // 2. Safely check the database against our strict findings
             avatarDatabase.forEach(av => {
-                if (av.type === 'default') return; // Skip defaults
-                if (unlockedAvatars.includes(av.id)) return; // Skip already unlocked
+                if (av.type === 'default') return; 
+                if (unlockedAvatars.includes(av.id)) return; 
                 
                 let isUnlocked = false;
+                const safeId = av.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const safeName = av.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-                // STRATEGY A: Check if the exact ID was in a dropdown value
-                if (foundValues.has(av.id.toLowerCase())) {
-                    isUnlocked = true;
-                } 
-                // STRATEGY B: Fallback if the user pasted raw text instead of HTML source
-                else if (!sourceText.includes('<html') && !sourceText.includes('<body')) {
-                    // Look for the exact avatar name, but only on its own line or surrounded by tabs
-                    const safeName = av.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special chars
-                    const exactNameRegex = new RegExp(`(?:^|\\n|\\t)\\s*${safeName}\\s*(?:$|\\n|\\t)`, 'i');
-                    if (exactNameRegex.test(sourceText)) {
+                if (isHTML) {
+                    // 1. The Dropdown Match: value="spacefaerie_premium"
+                    const valMatch = new RegExp(`value=["']${safeId}["']`, 'i');
+                    
+                    // 2. The Image Match: spacefaerie_premium.gif
+                    const gifMatch = new RegExp(`${safeId}\\.gif`, 'i');
+                    
+                    // 3. The Tag Match: >Premium - Space Faerie<
+                    const tagMatch = new RegExp(`>\\s*${safeName}\\s*<`, 'i');
+
+                    if (valMatch.test(sourceText) || gifMatch.test(sourceText) || tagMatch.test(sourceText)) {
+                        isUnlocked = true;
+                    }
+                } else {
+                    // Plain text fallback: only matches if the exact name is on its own line
+                    const exactNameMatch = new RegExp(`(?:^|\\n|\\r)\\s*${safeName}\\s*(?:$|\\n|\\r)`, 'i');
+                    if (exactNameMatch.test(sourceText)) {
                         isUnlocked = true;
                     }
                 }
 
-                // If found, add it to the collection
                 if (isUnlocked) {
                     unlockedAvatars.push(av.id);
                     matchCount++;
                 }
             });
 
-            // 3. Save and refresh the UI
+            // Save and update the UI
             if (matchCount > 0) {
                 localStorage.setItem('neoUnlocked_clean', JSON.stringify(unlockedAvatars));
                 renderMasterChecklist();
@@ -6410,10 +6410,10 @@ const avatarDatabase = [
                 updateGlobalCounters();
                 alert(`SUCCESS! We strictly matched ${matchCount} new avatars!`);
             } else {
-                alert("No new avatars found. Make sure you are pasting the 'Page Source' of the Chat Preferences page.");
+                alert("No new avatars found. Try right-clicking the Neopets page, selecting 'View Page Source', and pasting that!");
             }
             
-            document.getElementById('importSource').value = ''; // Clear the box
+            document.getElementById('importSource').value = ''; 
         };
         // --- EDITOR SELECTOR ---
         function renderEditorSelector() {
