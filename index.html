@@ -7038,6 +7038,7 @@ const avatarDatabase = [
         let savedFonts = JSON.parse(localStorage.getItem('neoFontsDB')) || {};
         let avatarPalettes = JSON.parse(localStorage.getItem('neoPalettesDB')) || {};
         window.currentPalette = ['#222','#222','#222','#222','#222','#222'];
+        let lastAppliedColors = null;
 
         
 
@@ -7254,6 +7255,7 @@ card.innerHTML = `<img src="assets/avatars/${av.id}.gif"><div class="avatar-labe
 document.getElementById('currentAvatarDisplay').src = `assets/avatars/${av.id}.gif`;                    document.getElementById('activeAvatarName').textContent = av.name;
 
                     window.currentPalette = avatarPalettes[currentAvatarId] || ['#222','#222','#222','#222','#222','#222'];
+                    lastAppliedColors = [...window.currentPalette];
                     
                     const swatches = document.querySelectorAll('#precisionSwatches .swatch');
                     swatches.forEach((sw, idx) => {
@@ -7271,33 +7273,54 @@ document.getElementById('currentAvatarDisplay').src = `assets/avatars/${av.id}.g
         if (avatarSearchInput) avatarSearchInput.addEventListener('input', renderEditorSelector);
 
         // --- AUTO-THEME TRIGGER ---
-        document.getElementById('autoThemeBtn').onclick = () => {
-            let htmlText = document.getElementById('neoHTML').value;
-            let sigText = document.getElementById('neoSignature').value;
-            const user = (document.getElementById('usernameInput').value || 'USER').toUpperCase();
+document.getElementById('autoThemeBtn').onclick = () => {
+    let htmlText = document.getElementById('neoHTML').value;
+    let sigText = document.getElementById('neoSignature').value;
+    const user = (document.getElementById('usernameInput').value || 'USER').toUpperCase();
 
-            if (!htmlText.trim() && !sigText.trim()) {
-                const c1 = window.currentPalette[0] !== '#222' ? window.currentPalette[0] : '#00e5ff'; 
-                const c2 = window.currentPalette[1] !== '#222' ? window.currentPalette[1] : c1; 
-                const c3 = window.currentPalette[2] !== '#222' ? window.currentPalette[2] : c2; 
-                const c4 = window.currentPalette[3] !== '#222' ? window.currentPalette[3] : c3; 
+    // If the text areas are completely empty, insert a default template
+    if (!htmlText.trim() && !sigText.trim()) {
+        const c1 = window.currentPalette[0] !== '#222' ? window.currentPalette[0] : '#00e5ff';
+        const c2 = window.currentPalette[1] !== '#222' ? window.currentPalette[1] : c1;
+        const c3 = window.currentPalette[2] !== '#222' ? window.currentPalette[2] : c2;
+        const c4 = window.currentPalette[3] !== '#222' ? window.currentPalette[3] : c3;
 
-                document.getElementById('neoHTML').value = `[center][fonts=4c=${c1}]☆[/font][fonts=4c=${c2}]☆[/font][fontc=${c3}s=4]★[/font][fonts=4c=${c4}]☆[/b][`;
-                document.getElementById('neoSignature').value = `][/font][fonts=1c=${c1}][b] ${user} [/b][/font][fontf=monospacec=${c2}s=1][br] 「 [I]theme applied[/I] 」 [/font]`;
-            } else {
-                for (let i = 0; i < 6; i++) {
-                    let hex = window.currentPalette[i];
-                    if (hex !== '#222') {
-                        const regex = new RegExp(`\\$C${i+1}`, 'gi');
-                        htmlText = htmlText.replace(regex, hex);
-                        sigText = sigText.replace(regex, hex);
-                    }
+        document.getElementById('neoHTML').value = `[center][fonts=4c=${c1}]☆[/font][fonts=4c=${c2}]☆[/font][fontc=${c3}s=4]★[/font][fonts=4c=${c4}]☆[/b][`;
+        document.getElementById('neoSignature').value = `][/font][fonts=1c=${c1}][b] ${user} [/b][/font][fontf=monospacec=${c2}s=1][br] 「 [I]theme applied[/I] 」 [/font]`;
+        
+        lastAppliedColors = [...window.currentPalette];
+    } else {
+        // STEP 1: Revert previously applied hex codes back to $C placeholders
+        if (lastAppliedColors) {
+            for (let i = 0; i < 6; i++) {
+                let oldHex = lastAppliedColors[i];
+                if (oldHex && oldHex.startsWith('#') && oldHex !== '#222') {
+                    // Revert old hex to $C tag globally
+                    const regex = new RegExp(oldHex, 'gi');
+                    htmlText = htmlText.replace(regex, `$C${i+1}`);
+                    sigText = sigText.replace(regex, `$C${i+1}`);
                 }
-                document.getElementById('neoHTML').value = htmlText;
-                document.getElementById('neoSignature').value = sigText;
             }
-            updatePreview();
-        };
+        }
+
+        // STEP 2: Apply the new current palette to all $C tags
+        for (let i = 0; i < 6; i++) {
+            let hex = window.currentPalette[i];
+            if (hex !== '#222') {
+                const regex = new RegExp(`\\$C${i+1}`, 'gi');
+                htmlText = htmlText.replace(regex, hex);
+                sigText = sigText.replace(regex, hex);
+            }
+        }
+        
+        document.getElementById('neoHTML').value = htmlText;
+        document.getElementById('neoSignature').value = sigText;
+
+        // Sync memory with newly applied palette
+        lastAppliedColors = [...window.currentPalette];
+    }
+    updatePreview();
+};
 function parseNeoCode(text) {
     if (!text) return '';
     let parsed = text
