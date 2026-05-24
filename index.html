@@ -7033,9 +7033,16 @@ const avatarDatabase = [
         "category": "Merch",
         "solution": "<p><strong>Jhudora Gruslens</strong> / <a href=\"https://merch.jellyneo.net/merch-guides/rare-item-codes/upper-deck/\" target=\"_blank\">Guide</a></p><p>Purchase the <a href=\"https://merch.jellyneo.net/products/8508/\">Battledome TCG Jhudora's Bluff Structure Deck</a> and redeem the included Rare Item Code.</p><p class=\"text-small\"><strong>Released:</strong> September 10, 2025</p>",
         "type": "secret"
+    },
+ {
+        "id": "ava_gallery_collector",
+        "name": "Gallery Go-Getter",
+        "url": "/assets/imgs/avatars/665.gif",
+        "category": "Other",
+        "solution": "<p><strong>Gallery Go-Getter</strong> / <a href="https://www.jellyneo.net/?go=spotlights" target="_blank">Guide</a></p><p>Win the <a href="https://www.neopets.com/gallery.phtml">Gallery Spotlight</a>.</p>
+        "type": "secret"
     }
 ];
-
 // --- STATE VARIABLES ---
         let unlockedAvatars = JSON.parse(localStorage.getItem('neoUnlocked_clean')) || avatarDatabase.filter(a => a.type === 'default').map(a => a.id);
         let currentAvatarId = 'default';
