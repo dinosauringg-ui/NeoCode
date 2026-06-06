@@ -7041,7 +7041,32 @@ const avatarDatabase = [
         "category": "Other",
         "solution": "<p><strong>Gallery Go-Getter</strong> / <a href=\"https://www.jellyneo.net/?go=spotlights\" target=\"_blank\">Guide</a></p><p>Win the <a href=\"https://www.neopets.com/gallery.phtml\">Gallery Spotlight</a>.</p>",
         "type": "secret"
-    }
+    },
+    {
+    "id": "ava_warlock_void",
+    "name": "Warlock of the Void",
+    "url": "https://images.neopets.com/items/avatars/warlock_void.gif",
+    "category": "Event",
+    "solution": "<p><strong>Warlock of the Void</strong></p><p>Deal at least 50,000 cumulative damage points while fighting Vocivus the Ceaseless Gormandizer.</p>",
+    "type": "event"
+},
+{
+    "id": "ava_void_vanquisher",
+    "name": "Void Vanquisher",
+    "url": "https://images.neopets.com/items/avatars/void_vanquisher.gif",
+    "category": "Event",
+    "solution": "<p><strong>Void Vanquisher</strong></p><p>Deal damage during a fight with Vocivus the Ceaseless Gormandizer.</p>",
+    "type": "event"
+},
+{
+    "id": "ava_stamp_collector_otheriv",
+    "name": "Stamp Collector - Other IV",
+    "url": "https://images.neopets.com/items/avatars/stamp_collector_otheriv.gif",
+    "category": "Collection",
+    "solution": "<p><strong>Stamp Collector - Other IV</strong></p><p>Complete Other IV page of your Stamp Album.</p>",
+    "type": "collection"
+}
+    
 ];
 // --- STATE VARIABLES ---
         let unlockedAvatars = JSON.parse(localStorage.getItem('neoUnlocked_clean')) || avatarDatabase.filter(a => a.type === 'default').map(a => a.id);
